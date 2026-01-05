@@ -6,7 +6,7 @@ const MODEL_NAME = 'gemini-1.5-flash';
 
 export async function analyzeEngineeringImage(base64Image: string): Promise<MaterialEstimate> {
   // CORRECCIÓN: Usamos import.meta.env y el nombre exacto que pusiste en Netlify
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+ const apiKey = 'AIzaSyBhTj1e7uEGTPUY4xWLZVD-9G1-kfklBfY';
   const ai = new GoogleGenAI(apiKey);
   
   const prompt = `
