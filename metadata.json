@@ -1,0 +1,7 @@
+{
+  "name": "CUBIC AI - Construction Estimator",
+  "description": "Professional engineering assistant that analyzes blueprints and sketches to calculate materials like cement, blocks, and steel rods using advanced computer vision.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
