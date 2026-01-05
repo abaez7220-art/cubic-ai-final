@@ -1,11 +1,13 @@
-
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { MaterialEstimate } from "../types";
 
-const MODEL_NAME = 'gemini-3-pro-preview';
+// Usamos un modelo estable compatible con la versión gratuita
+const MODEL_NAME = 'gemini-1.5-flash';
 
 export async function analyzeEngineeringImage(base64Image: string): Promise<MaterialEstimate> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // CORRECCIÓN: Usamos import.meta.env y el nombre exacto que pusiste en Netlify
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  const ai = new GoogleGenAI(apiKey);
   
   const prompt = `
     Actúa como un ingeniero civil experto en presupuestos de obra.
@@ -22,23 +24,9 @@ export async function analyzeEngineeringImage(base64Image: string): Promise<Mate
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const model = ai.getGenerativeModel({
       model: MODEL_NAME,
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: base64Image.split(',')[1] || base64Image,
-              },
-            },
-          ],
-        },
-      ],
-      config: {
-        thinkingConfig: { thinkingBudget: 4000 },
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -56,8 +44,19 @@ export async function analyzeEngineeringImage(base64Image: string): Promise<Mate
       },
     });
 
-    const result = JSON.parse(response.text || '{}');
-    return result as MaterialEstimate;
+    const result = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64Image.split(',')[1] || base64Image,
+        },
+      },
+    ]);
+
+    const responseText = result.response.text();
+    return JSON.parse(responseText) as MaterialEstimate;
+
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     throw new Error("Error al analizar la imagen. Asegúrate de que la imagen sea clara y contenga información de ingeniería.");
