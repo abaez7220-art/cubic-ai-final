@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // LLAVE MAESTRA - NO TOCAR
-const apiKey = 'AIzaSyBhTj1e7uEGTPUY4xWLZVD-9G1-kfklBfY';
+const apiKey = 'AIzaSyBhTj1e7uEGTPUY4xWLZVD-9G1-kfkIBfY';
 const genAI = new GoogleGenerativeAI(apiKey);
 
 // Forzamos que la web detecte la llave en el navegador
