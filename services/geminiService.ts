@@ -1,13 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// LLAVE MAESTRA - NO TOCAR
-const apiKey = 'AIzaSyBhTj1e7uEGTPUY4xWLZVD-9G1-kfkIBfY';
-const genAI = new GoogleGenerativeAI(apiKey);
+// Conectamos con la llave premium guardada en Netlify
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Forzamos que la web detecte la llave en el navegador
-if (typeof window !== 'undefined') {
-  (window as any).VITE_GEMINI_API_KEY = apiKey;
-}
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function analyzeEngineeringImage(base64Image: string) {
   const model = genAI.getGenerativeModel({
