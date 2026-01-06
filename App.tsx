@@ -7,8 +7,9 @@ import {
   Calculator, FileSearch, Target
 } from 'lucide-react';
 
-const API_KEY = "AIzaSyBr7px50ZywMy3wnRxu5TfVunLkRVD9aMg";
-const genAI = new GoogleGenerativeAI(API_KEY);
+// CONEXIÓN SEGURA: Usamos la variable de Netlify que tiene los $300 USD
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(API_KEY || "");
 
 export default function App() {
   const [resultado, setResultado] = useState<any>(null);
@@ -18,7 +19,10 @@ export default function App() {
 
   const analizarImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !API_KEY) {
+      if (!API_KEY) alert("Error: No se detectó la llave premium en Netlify.");
+      return;
+    }
 
     setPreview(URL.createObjectURL(file));
     setCargando(true);
@@ -48,20 +52,19 @@ export default function App() {
       };
     } catch (err) {
       console.error(err);
-      alert("Error al procesar. Intenta de nuevo.");
+      alert("Error al procesar. Verifica que la llave en Netlify sea la correcta.");
       setCargando(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans">
-      {/* BANNER SUPERIOR */}
+      {/* El resto de tu hermoso diseño se queda exactamente igual */}
       <div className="w-full bg-red-600 py-1.5 px-4 flex justify-center items-center gap-4 shadow-lg">
         <span className="text-[10px] font-black tracking-[0.3em] uppercase animate-pulse">● SYSTEM LIVE: AI ENGINE ONLINE</span>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
-        {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-white/5 pb-8 gap-6">
           <div className="flex items-center gap-4">
             <div className="bg-red-600 p-3 rounded-2xl rotate-3 shadow-xl shadow-red-600/20">
@@ -73,7 +76,6 @@ export default function App() {
             </div>
           </div>
           
-          {/* SECCIÓN "CÓMO FUNCIONA" - RÁPIDA */}
           <div className="flex gap-8">
             <div className="text-center">
               <p className="text-[10px] font-black text-red-600 uppercase mb-1">1. Sube</p>
@@ -91,7 +93,6 @@ export default function App() {
         </header>
 
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* LADO IZQUIERDO: INPUT Y EXPLICACIÓN */}
           <div className="lg:col-span-5 space-y-8">
             <div className="relative group p-1 bg-gradient-to-br from-red-600/30 to-transparent rounded-[2.5rem]">
               <div className="relative bg-zinc-900 border border-white/5 rounded-[2.4rem] overflow-hidden aspect-square flex items-center justify-center">
@@ -107,28 +108,14 @@ export default function App() {
               </div>
             </div>
 
-            {/* TARJETAS DE BENEFICIOS "PARA QUÉ SIRVE" */}
             <div className="space-y-4">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">¿Para qué sirve Cubic AI?</h3>
-              <BenefitCard 
-                icon={<Calculator size={20}/>} 
-                title="Presupuestos Rápidos" 
-                desc="Obtén una lista de materiales en segundos para cotizar tu obra hoy mismo."
-              />
-              <BenefitCard 
-                icon={<Target size={20}/>} 
-                title="Evita el Desperdicio" 
-                desc="Cálculos precisos de bloques y cemento para que no compres de más."
-              />
-              <BenefitCard 
-                icon={<FileSearch size={20}/>} 
-                title="Pre-dimensionamiento" 
-                desc="Ideal para arquitectos e ingenieros que necesitan validar áreas rápidamente."
-              />
+              <BenefitCard icon={<Calculator size={20}/>} title="Presupuestos Rápidos" desc="Obtén una lista de materiales en segundos para cotizar tu obra hoy mismo." />
+              <BenefitCard icon={<Target size={20}/>} title="Evita el Desperdicio" desc="Cálculos precisos de bloques y cemento para que no compres de más." />
+              <BenefitCard icon={<FileSearch size={20}/>} title="Pre-dimensionamiento" desc="Ideal para arquitectos e ingenieros que necesitan validar áreas rápidamente." />
             </div>
           </div>
 
-          {/* LADO DERECHO: RESULTADOS (IGUAL AL ANTERIOR) */}
           <div className="lg:col-span-7">
             {cargando ? (
               <div className="h-full min-h-[450px] flex flex-col items-center justify-center bg-zinc-900/10 border border-white/5 rounded-[2.5rem] p-12 text-center">
@@ -177,7 +164,6 @@ export default function App() {
   );
 }
 
-// COMPONENTE DE BENEFICIOS
 function BenefitCard({ icon, title, desc }: any) {
   return (
     <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-2xl group hover:border-red-600/50 transition-colors">
