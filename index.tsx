@@ -1,14 +1,14 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import './index.css';
 
+// Eliminamos la línea de index.css para que Netlify no de error si no encuentra el archivo
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  const errorMsg = "Error Crítico: El contenedor 'root' no existe en el HTML.";
+  const errorMsg = "Error: No se encontró el elemento root.";
   console.error(errorMsg);
-  document.body.innerHTML = `<div style="background:#1a1a1a;color:white;padding:20px;font-family:sans-serif;">${errorMsg}</div>`;
+  document.body.innerHTML = `<div style="background:#1a1a1a;color:white;padding:20px;">${errorMsg}</div>`;
   throw new Error(errorMsg);
 }
 
