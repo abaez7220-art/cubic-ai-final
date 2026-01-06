@@ -1,103 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Upload, 
-  Loader2, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Ruler, 
-  Layers, 
-  Package, 
-  Calculator, 
-  History, 
-  ChevronRight,
-  Building2
-} from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import React, { useState } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// CONFIGURACIÓN DE LA IA
+// LLAVE DE ACCESO
 const API_KEY = "AIzaSyBr7px50ZywMy3wnRxu5TfVunLkRVD9aMg";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-enum AnalysisStatus {
-  IDLE = 'IDLE',
-  LOADING = 'LOADING',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR'
-}
+export default function App() {
+  const [resultado, setResultado] = useState<string>("");
+  const [cargando, setCargando] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
-const App = () => {
-  const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
-  const [error, setError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [currentResult, setCurrentResult] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const analizarImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Configurar UI para carga
-    setPreviewUrl(URL.createObjectURL(file));
-    setStatus(AnalysisStatus.LOADING);
-    setError(null);
+    setPreview(URL.createObjectURL(file));
+    setCargando(true);
+    setResultado("");
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onloadend = async () => {
         const base64Data = (reader.result as string).split(',')[1];
-
-        // Prompt optimizado para tu diseño
-        const prompt = "Analiza esta imagen de construcción. Eres un ingeniero experto. Calcula y devuelve ESTRICTAMENTE un objeto JSON con estos campos: area_m2, blocks_count, cement_bags, rods_count, gravel_m3, sand_m3, y una 'explanation' detallada. No escribas texto extra, solo el JSON.";
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const prompt = "Actúa como un ingeniero civil experto. Analiza este plano de construcción y genera un presupuesto detallado que incluya: 1. Área total estimada en m2. 2. Cantidad de bloques de 6 u 8 pulgadas. 3. Cantidad de fundas de cemento. 4. Cantidad de varillas. 5. Metros cúbicos de arena y grava. Responde de forma clara y profesional en español.";
 
         const result = await model.generateContent([
           prompt,
           { inlineData: { data: base64Data, mimeType: file.type } }
         ]);
-
-        const responseText = result.response.text();
-        const jsonClean = responseText.replace(/```json|```/g, "").trim();
-        const data = JSON.parse(jsonClean);
-
-        const newResult = {
-          id: Date.now().toString(),
-          timestamp: new Date(),
-          imageUrl: previewUrl || URL.createObjectURL(file),
-          estimate: data
-        };
-
-        setCurrentResult(newResult);
-        setHistory(prev => [newResult, ...prev]);
-        setStatus(AnalysisStatus.SUCCESS);
+        
+        setResultado(result.response.text());
+        setCargando(false);
       };
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Error al analizar la imagen");
-      setStatus(AnalysisStatus.ERROR);
+      setResultado("Error técnico: No se pudo conectar con el motor de IA.");
+      setCargando(false);
     }
   };
 
-  const chartData = currentResult ? [
-    { name: 'Bloques', value: currentResult.estimate.blocks_count, color: '#f97316' },
-    { name: 'Cemento', value: currentResult.estimate.cement_bags, color: '#94a3b8' },
-    { name: 'Varillas', value: currentResult.estimate.rods_count, color: '#ef4444' },
-    { name: 'Arena/Grava', value: currentResult.estimate.sand_m3 + currentResult.estimate.gravel_m3, color: '#fbbf24' }
-  ] : [];
-
   return (
-    <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center p-6 lg:p-12 font-sans">
-      <header className="w-full max-w-6xl mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-red-600/20">
-              <Building2 className="text-white" size={24} />
-            </div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase italic">Cubic AI</h1>
-          </div>
-          <p className="text-zinc-500 font-medium tracking-tight">INTELIGENCIA ARTIFICIAL APLICADA A CUBICACIÓN</p>
+    <div style={{ 
+      padding: '20px', 
+      backgroundColor: '#0a0a0a', 
+      color: '#fff', 
+      minHeight: '100vh', 
+      fontFamily: 'system-ui, sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }}>
+      <header style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <h1 style={{ color: '#ff4d4d', fontSize: '3rem', margin: '0' }}>CUBIC AI</h1>
+        <p style={{ color: '#888' }}>SISTEMA DE CUBICACIÓN INTELIGENTE</p>
+      </header>
+
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '800px', 
+        background: '#1a1a1a', 
+        padding: '30px', 
+        borderRadius: '20px',
+        border: '1px solid #333'
+      }}>
+        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={analizarImagen} 
+            style={{ 
+              padding: '15px', 
+              background: '#333', 
+              borderRadius: '10px', 
+              color: '#fff',
+              cursor: 'pointer'
+            }} 
+          />
         </div>
-        <div className="flex gap-4">
-          <div className="text-right border-r border-zinc
+
+        {preview && (
+          <img src={preview} alt="Plano" style={{ width: '100%', borderRadius: '10px', marginBottom: '20px' }} />
+        )}
+
+        {cargando && (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#4da6ff' }}>
+            <p style={{ fontWeight: 'bold', animation: 'pulse 1.5s infinite' }}>⚙️ PROCESANDO PLANO CON INTELIGENCIA ARTIFICIAL...</p>
+          </div>
+        )}
+
+        {resultado && (
+          <div style={{ 
+            background: '#000', 
+            padding: '25px', 
+            borderRadius: '10px', 
+            borderLeft: '5px solid #ff4d4d',
+            lineHeight: '1.6'
+          }}>
+            <h2 style={{ marginTop: '0', color: '#ff4d4d' }}>Memoria de Cálculo:</h2>
+            <div style={{ whiteSpace: 'pre-wrap', fontSize: '1rem' }}>{resultado}</div>
+          </div>
+        )}
+      </div>
+
+      <footer style={{ marginTop: '50px', color: '#444', fontSize: '0.8rem' }}>
+        POWERED BY GEMINI PRO VISION // CUBIC AI v4.0
+      </footer>
+    </div>
+  );
+}
