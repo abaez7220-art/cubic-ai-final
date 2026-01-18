@@ -1,111 +1,101 @@
 import React, { useState } from 'react';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { 
+  Building2, Upload, Loader2, Ruler, Layers, 
+  Package, Zap, ShieldCheck, BarChart3, AlertOctagon, 
+  Calculator, FileSearch, Target
+} from 'lucide-react';
 
-// Define la estructura de los resultados para que TypeScript no moleste
-interface CalculationResult {
-  areas: { nombre: string; m2: number }[];
-  materiales: {
-    blocks: number;
-    cemento: number;
-    arena_m3: number;
-    varillas_3_8: number;
-  };
-  analisis_estructural: string;
-}
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(API_KEY || "");
 
 export default function App() {
-  const [image, setImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CalculationResult | null>(null);
+  const [resultado, setResultado] = useState<any>(null);
+  const [cargando, setCargando] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const analizarImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+    if (!file || !API_KEY) return;
 
-  const analizarPlano = async () => {
-    if (!image) return alert("Sube el plano primero, mano.");
-    
-    setLoading(true);
-    setResult(null);
-
-    // INSTRUCCIÓN ULTRA-ESTRICTA PARA LA IA
-    const systemPrompt = `Actúa como un Ingeniero Estructural experto. 
-    Analiza la imagen del plano y extrae las medidas. 
-    Calcula materiales para muros de block de 6".
-    RESPONDE ÚNICAMENTE EN FORMATO JSON PURO. 
-    No uses bloques de código Markdown, no saludes, no expliques nada.
-    
-    Formato requerido:
-    {
-      "areas": [{"nombre": "Dormitorio", "m2": 0}],
-      "materiales": {"blocks": 0, "cemento": 0, "arena_m3": 0, "varillas_3_8": 0},
-      "analisis_estructural": "Breve nota técnica"
-    }`;
+    setPreview(URL.createObjectURL(file));
+    setCargando(true);
+    setResultado(null);
 
     try {
-      // AQUÍ VA TU LLAMADA A LA API (OpenAI o Gemini)
-      const response = await fetch('TU_API_URL_AQUÍ', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image, prompt: systemPrompt }),
-      });
-
-      const data = await response.json();
-      const rawText = data.choices[0].message.content;
-
-      // --- TRUCO MÁGICO PARA LIMPIAR EL JSON ---
-      const start = rawText.indexOf('{');
-      const end = rawText.lastIndexOf('}');
-      const jsonString = rawText.substring(start, end + 1);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const reader = new FileReader();
       
-      const finalData: CalculationResult = JSON.parse(jsonString);
-      setResult(finalData);
+      reader.onloadend = async () => {
+        try {
+          const base64Data = (reader.result as string).split(',')[1];
+          
+          // PROMPT NIVEL DIOS: No le damos espacio a que hable de más
+          const prompt = "Analiza este plano arquitectónico. Entrega los datos técnicos en formato JSON puro. No escribas NADA fuera del JSON. Formato: {\"area\": 0.0, \"bloques\": 0, \"cemento\": 0, \"varillas\": 0, \"explicacion\": \"...\"}";
 
-    } catch (error) {
-      console.error(error);
-      alert("Error analizando. La IA se volvió loca con el formato.");
-    } finally {
-      setLoading(false);
+          const result = await model.generateContent([
+            prompt,
+            { inlineData: { data: base64Data, mimeType: file.type } }
+          ]);
+          
+          let responseText = result.response.text();
+          
+          // LIMPIEZA EXTREMA: Buscamos el primer '{' y el último '}'
+          const inicio = responseText.indexOf('{');
+          const fin = responseText.lastIndexOf('}') + 1;
+          
+          if (inicio === -1 || fin === 0) throw new Error("No hay JSON");
+          
+          const jsonLimpio = responseText.substring(inicio, fin).replace(/\\n/g, "");
+          setResultado(JSON.parse(jsonLimpio));
+
+        } catch (err) {
+          console.error(err);
+          alert("Error analizando. La IA se volvió loca con el formato, ¡intenta de nuevo!");
+        } finally {
+          setCargando(false); // El círculo rojo MUERE aquí sí o sí
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setCargando(false);
+      alert("Error de conexión.");
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#1a1a1a', color: 'white', minHeight: '100vh' }}>
-      <h1>CUBIC AI 🏗️</h1>
-      <p>Cálculo Estructural Inteligente - Fase Beta</p>
-      
-      <input type="file" onChange={handleFileUpload} accept="image/*" />
-      
-      {image && (
-        <div style={{ marginTop: '20px' }}>
-          <img src={image} alt="Plano" style={{ maxWidth: '300px', borderRadius: '8px' }} />
-          <br />
-          <button 
-            onClick={analizarPlano} 
-            disabled={loading}
-            style={{ padding: '10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: '#e53e3e', color: 'white', border: 'none', borderRadius: '5px' }}
-          >
-            {loading ? "PROCESANDO OBRA..." : "CALCULAR AHORA"}
-          </button>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#020202] text-white font-sans">
+      <div className="w-full bg-red-600 py-1.5 px-4 flex justify-center items-center gap-4">
+        <span className="text-[10px] font-black tracking-[0.3em] uppercase animate-pulse">● SYSTEM LIVE: AI ENGINE ONLINE</span>
+      </div>
 
-      {result && (
-        <div style={{ marginTop: '30px', padding: '20px', border: '1px solid #444', borderRadius: '10px', backgroundColor: '#2d2d2d' }}>
-          <h2>Resultados del Cálculo:</h2>
-          <ul>
-            <li><strong>Blocks de 6":</strong> {result.materiales.blocks} unidades</li>
-            <li><strong>Cemento:</strong> {result.materiales.cemento} fundas</li>
-            <li><strong>Arena:</strong> {result.materiales.arena_m3} m³</li>
-            <li><strong>Varillas 3/8:</strong> {result.materiales.varillas_3_8} unidades</li>
-          </ul>
-          <p><strong>Nota técnica:</strong> {result.analisis_estructural}</p>
-        </div>
-      )}
-    </div>
-  );
-}
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <header className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-white/5 pb-8">
+          <div className="flex items-center gap-4">
+            <div className="bg-red-600 p-3 rounded-2xl rotate-3">
+              <Building2 size={32} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none">Cubic <span className="text-red-600">AI</span></h1>
+              <p className="text-[9px] text-zinc-500 font-bold tracking-widest uppercase mt-1">Fase Beta - Acceso Gratuito</p>
+            </div>
+          </div>
+        </header>
+
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-5 space-y-8">
+            <div className="relative bg-zinc-900 border border-white/5 rounded-[2.4rem] overflow-hidden aspect-square flex items-center justify-center">
+              {preview ? (
+                <img src={preview} className="w-full h-full object-cover opacity-80" alt="Plano" />
+              ) : (
+                <div className="flex flex-col items-center gap-4 text-zinc-600">
+                  <Upload size={48} strokeWidth={1} />
+                  <span className="font-black text-[10px] uppercase tracking-[0.3em]">Subir Plano</span>
+                </div>
+              )}
+              <input type="file" onChange={analizarImagen} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+            </div>
+          </div>
+
+          <div className="lg:col-span-7">
+            {c
