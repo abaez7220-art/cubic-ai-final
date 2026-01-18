@@ -1,65 +1,73 @@
 import React, { useState } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { 
-  Building2, Upload, Loader2, CheckCircle2, 
-  Lock, CreditCard, Ruler, Layers, Package,
-  Zap, ShieldCheck, BarChart3, AlertOctagon, Cpu,
+  Building2, Upload, Loader2, CreditCard, Ruler, Layers, 
+  Package, Zap, ShieldCheck, BarChart3, AlertOctagon, 
   Calculator, FileSearch, Target
 } from 'lucide-react';
 
-// CONEXIÓN SEGURA: Usamos la variable de Netlify que tiene los $300 USD
+// CONEXIÓN SEGURA
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY || "");
 
 export default function App() {
   const [resultado, setResultado] = useState<any>(null);
   const [cargando, setCargando] = useState(false);
-  const [pagado, setPagado] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
   const analizarImagen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !API_KEY) {
-      if (!API_KEY) alert("Error: No se detectó la llave premium en Netlify.");
+      if (!API_KEY) alert("Error: No se detectó la llave premium en Vercel.");
       return;
     }
 
     setPreview(URL.createObjectURL(file));
     setCargando(true);
     setResultado(null);
-    setPagado(false);
 
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const reader = new FileReader();
-      reader.readAsDataURL(file);
+      
       reader.onloadend = async () => {
-        const base64Data = (reader.result as string).split(',')[1];
-        const prompt = "Analiza este plano. Responde UNICAMENTE con un JSON: { \"area\": 0, \"bloques\": 0, \"cemento\": 0, \"varillas\": 0, \"explicacion\": \"texto\" }.";
+        try {
+          const base64Data = (reader.result as string).split(',')[1];
+          // Prompt optimizado para velocidad
+          const prompt = "Analiza este plano de construcción. Calcula: área total, bloques necesarios, sacos de cemento y varillas. Responde ÚNICAMENTE un objeto JSON con estas llaves: { \"area\": 0, \"bloques\": 0, \"cemento\": 0, \"varillas\": 0, \"explicacion\": \"...\" }";
 
-        const result = await model.generateContent([
-          prompt,
-          { inlineData: { data: base64Data, mimeType: file.type } }
-        ]);
-        
-        const responseText = result.response.text();
-        const inicioJson = responseText.indexOf('{');
-        const finJson = responseText.lastIndexOf('}') + 1;
-        const jsonPuro = responseText.substring(inicioJson, finJson);
-        
-        setResultado(JSON.parse(jsonPuro));
-        setCargando(false);
+          const result = await model.generateContent([
+            prompt,
+            { inlineData: { data: base64Data, mimeType: file.type } }
+          ]);
+          
+          const responseText = result.response.text();
+          
+          // LIMPIEZA DE JSON (Evita que se quede analizando)
+          const inicioJson = responseText.indexOf('{');
+          const finJson = responseText.lastIndexOf('}') + 1;
+          const jsonPuro = responseText.substring(inicioJson, finJson);
+          
+          setResultado(JSON.parse(jsonPuro));
+        } catch (err) {
+          console.error(err);
+          alert("La IA mandó un formato ilegible. ¡Intenta de nuevo!");
+        } finally {
+          // ESTA LÍNEA MATA EL CÍRCULO ROJO PASE LO QUE PASE
+          setCargando(false);
+        }
       };
+      reader.readAsDataURL(file);
+
     } catch (err) {
       console.error(err);
-      alert("Error al procesar. Verifica que la llave en Netlify sea la correcta.");
       setCargando(false);
+      alert("Error de conexión con el motor de IA.");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#020202] text-white font-sans">
-      {/* El resto de tu hermoso diseño se queda exactamente igual */}
       <div className="w-full bg-red-600 py-1.5 px-4 flex justify-center items-center gap-4 shadow-lg">
         <span className="text-[10px] font-black tracking-[0.3em] uppercase animate-pulse">● SYSTEM LIVE: AI ENGINE ONLINE</span>
       </div>
@@ -77,17 +85,9 @@ export default function App() {
           </div>
           
           <div className="flex gap-8">
-            <div className="text-center">
-              <p className="text-[10px] font-black text-red-600 uppercase mb-1">1. Sube</p>
-              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Imagen del Plano</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] font-black text-red-600 uppercase mb-1">2. Analiza</p>
-              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Motor de IA</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] font-black text-red-600 uppercase mb-1">3. Recibe</p>
-              <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Materiales y Área</p>
+            <div className="text-center opacity-50">
+              <p className="text-[10px] font-black text-white uppercase mb-1">Fase Beta</p>
+              <p className="text-[9px] text-red-600 font-bold uppercase tracking-tighter">Acceso Gratuito</p>
             </div>
           </div>
         </header>
@@ -109,10 +109,8 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">¿Para qué sirve Cubic AI?</h3>
-              <BenefitCard icon={<Calculator size={20}/>} title="Presupuestos Rápidos" desc="Obtén una lista de materiales en segundos para cotizar tu obra hoy mismo." />
-              <BenefitCard icon={<Target size={20}/>} title="Evita el Desperdicio" desc="Cálculos precisos de bloques y cemento para que no compres de más." />
-              <BenefitCard icon={<FileSearch size={20}/>} title="Pre-dimensionamiento" desc="Ideal para arquitectos e ingenieros que necesitan validar áreas rápidamente." />
+              <BenefitCard icon={<Calculator size={20}/>} title="Presupuestos Rápidos" desc="Materiales en segundos para cotizar hoy mismo." />
+              <BenefitCard icon={<Target size={20}/>} title="Evita el Desperdicio" desc="Cálculos precisos para que no compres de más." />
             </div>
           </div>
 
@@ -121,40 +119,30 @@ export default function App() {
               <div className="h-full min-h-[450px] flex flex-col items-center justify-center bg-zinc-900/10 border border-white/5 rounded-[2.5rem] p-12 text-center">
                 <Loader2 className="animate-spin text-red-600 mb-6" size={60} />
                 <h3 className="text-2xl font-black italic uppercase mb-2">Procesando Obra</h3>
-                <p className="text-zinc-500 text-xs tracking-widest uppercase font-bold">Identificando muros, columnas y espacios...</p>
+                <p className="text-zinc-500 text-xs tracking-widest uppercase font-bold">Identificando muros y columnas...</p>
               </div>
-            ) : resultado && !pagado ? (
-              <div className="p-10 bg-gradient-to-b from-zinc-900 to-black border border-red-600/30 rounded-[2.5rem] shadow-2xl animate-in zoom-in-95">
-                <div className="space-y-8">
-                  <h3 className="text-4xl font-black italic tracking-tighter uppercase leading-tight">Cubicación<br/>Lista</h3>
-                  <p className="text-zinc-400 font-medium italic">Hemos detectado el metraje cuadrado y las cantidades de obra gris. Paga para ver el desglose detallado.</p>
-                  <button onClick={() => setPagado(true)} className="w-full py-6 bg-white text-black rounded-2xl font-black flex items-center justify-center gap-4 hover:bg-red-600 hover:text-white transition-all transform active:scale-95">
-                    <CreditCard size={20} /> DESBLOQUEAR REPORTE ($5.00)
-                  </button>
+            ) : resultado ? (
+              <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                <div className="bg-red-600/10 border border-red-600/20 p-4 rounded-2xl text-center">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-red-500">🚀 REPORTE GENERADO CON ÉXITO</p>
                 </div>
-              </div>
-            ) : resultado && pagado ? (
-              <div className="space-y-6 animate-in slide-in-from-bottom-8">
                 <div className="grid grid-cols-3 gap-4">
                   <ResultCard label="ÁREA" val={`${resultado.area}m²`} />
                   <ResultCard label="BLOQUES" val={resultado.bloques} />
                   <ResultCard label="CEMENTO" val={`${resultado.cemento} sacos`} />
                 </div>
                 <div className="p-8 bg-zinc-900 border border-white/5 rounded-[2.5rem] shadow-2xl">
-                    <h4 className="font-black italic uppercase tracking-widest text-zinc-500 text-xs mb-4">Análisis del Motor AI</h4>
+                    <h4 className="font-black italic uppercase tracking-widest text-zinc-500 text-xs mb-4">Explicación Técnica</h4>
                     <p className="text-zinc-300 text-xl leading-relaxed italic font-bold mb-8">"{resultado.explicacion}"</p>
-                    <div className="p-5 bg-red-600/10 border border-red-600/20 rounded-3xl flex gap-4">
-                        <AlertOctagon className="text-red-600 shrink-0" size={24} />
-                        <p className="text-[11px] text-zinc-500 italic leading-tight">
-                          AVISO: Este reporte es una estimación técnica. La validación final debe realizarla un ingeniero civil facultado.
-                        </p>
-                    </div>
+                    <button onClick={() => window.location.reload()} className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase text-xs hover:bg-red-600 hover:text-white transition-all">
+                      Analizar otro plano ↗
+                    </button>
                 </div>
               </div>
             ) : (
               <div className="h-full min-h-[450px] flex flex-col items-center justify-center border border-zinc-900 border-dashed rounded-[2.5rem]">
                 <BarChart3 size={64} className="mb-4 text-zinc-900 opacity-20" />
-                <p className="font-black italic uppercase tracking-widest text-[10px] text-zinc-700">Sube un plano para comenzar</p>
+                <p className="font-black italic uppercase tracking-widest text-[10px] text-zinc-700">Esperando plano del ingeniero...</p>
               </div>
             )}
           </div>
@@ -164,6 +152,7 @@ export default function App() {
   );
 }
 
+// COMPONENTES AUXILIARES (Sin cambios)
 function BenefitCard({ icon, title, desc }: any) {
   return (
     <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-2xl group hover:border-red-600/50 transition-colors">
