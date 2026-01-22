@@ -29,32 +29,39 @@ export default function App() {
     if (!image) return alert("Sube el plano primero.");
     setLoading(true);
     setResult(null);
-
     const promptPersona = "Eres un calculador de materiales experto. Analiza este plano y responde UNICAMENTE con un objeto JSON. No hables. Formato: {\"areas\": [], \"materiales\": {\"blocks\": 0, \"cemento\": 0, \"arena_m3\": 0, \"varillas\": 0}, \"nota\": \"\"}";
 
     try {
-      const response = await fetch('/api/analyze', { 
+      console.log("Enviando imagen a /api/analyze..."); // Debug: para ver si llega aquí
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image, prompt: promptPersona }),
       });
 
-      const data = await response.json();
-      let rawContent = data.choices[0].message.content;
+      if (!response.ok) {
+        throw new Error(`Error en API: ${response.status}`);
+      }
 
-      // Limpieza profesional de JSON
-      rawContent = rawContent.replace(/```json|```/g, "");
+      const data = await response.json();
+      console.log("Respuesta cruda de API:", data); // Debug: ve qué llega
+
+      let rawContent = data.choices[0].message.content;
+      // Limpieza mejorada de JSON
+      rawContent = rawContent.replace(/```json|```/g, "").trim();
       const start = rawContent.indexOf('{');
       const end = rawContent.lastIndexOf('}');
-      
-      if (start === -1) throw new Error("No JSON");
-      
-      const cleanJson = rawContent.substring(start, end + 1);
-      setResult(JSON.parse(cleanJson));
 
+      if (start === -1 || end === -1) {
+        throw new Error("No se encontró JSON válido en la respuesta");
+      }
+
+      const cleanJson = rawContent.substring(start, end + 1);
+      const parsedResult = JSON.parse(cleanJson);
+      setResult(parsedResult);
     } catch (error) {
-      console.error(error);
-      alert("Error de lectura. ¡Intenta subirlo de nuevo!");
+      console.error("Error completo:", error);
+      alert("Error de lectura. ¡Intenta subirlo de nuevo! Revisa la consola para detalles.");
     } finally {
       setLoading(false);
     }
@@ -62,13 +69,11 @@ export default function App() {
 
   return (
     <div style={{ padding: '20px', minHeight: '100vh', backgroundColor: '#000', color: '#fff', fontFamily: 'sans-serif', textAlign: 'center' }}>
-      
       {/* TÍTULO Y DESCRIPCIÓN */}
       <div style={{ marginBottom: '40px', marginTop: '20px' }}>
         <h1 style={{ color: '#ff4d4d', fontSize: '2rem', margin: '0' }}>CUBIC AI PRO 🏗️</h1>
         <p style={{ color: '#888', fontSize: '0.9rem' }}>Identifica dimensiones y calcula materiales de obra gris automáticamente.</p>
       </div>
-
       {/* ÁREA DE CARGA */}
       <div style={{ maxWidth: '500px', margin: 'auto', padding: '30px', border: '1px solid #333', borderRadius: '20px', backgroundColor: '#0a0a0a' }}>
         <input type="file" onChange={handleFileUpload} accept="image/*" style={{ marginBottom: '20px', color: '#888' }} />
@@ -76,8 +81,8 @@ export default function App() {
         {image && (
           <div>
             <img src={image} alt="Plano" style={{ width: '100%', borderRadius: '10px', marginBottom: '20px' }} />
-            <button 
-              onClick={analizarPlano} 
+            <button
+              onClick={analizarPlano}
               disabled={loading}
               style={{ width: '100%', padding: '15px', backgroundColor: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
             >
@@ -86,7 +91,6 @@ export default function App() {
           </div>
         )}
       </div>
-
       {/* RESULTADOS */}
       {result && (
         <div style={{ maxWidth: '500px', margin: '30px auto', padding: '20px', backgroundColor: '#111', borderRadius: '15px', textAlign: 'left', border: '1px solid #222' }}>
@@ -98,6 +102,10 @@ export default function App() {
           <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '10px' }}>{result.nota}</p>
         </div>
       )}
-
       {/* AVISO LEGAL MINIATURA */}
-      <div style={{ marginTop:
+      <div style={{ marginTop: '40px', fontSize: '0.75rem', color: '#444' }}>
+        Resultados son estimaciones IA • Verificar con profesional calificado
+      </div>
+    </div>
+  );
+}
