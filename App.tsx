@@ -16,16 +16,18 @@ export default function App() {
   };
 
   const analizarPlano = async () => {
-    if (!image) return alert("Sube el plano primero.");
+    if (!image) return alert("Por favor, sube un plano primero.");
     
-    // Usamos la llave que pusiste en Vercel
+    // 1. Solución al problema de la API Key:
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return alert("Error: No se encontró la llave en Vercel");
+    if (!apiKey) {
+      alert("Error: No se encontró la VITE_GEMINI_API_KEY en Vercel.");
+      return;
+    }
 
     setLoading(true);
-    setResult(null);
-
     try {
+      // 2. Solución al error 404: Hablamos directo con Google, NO con /api/analyze
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -34,14 +36,16 @@ export default function App() {
         inlineData: { data: base64Data, mimeType: "image/jpeg" },
       };
 
-      const prompt = "Analiza este plano de construcción. Calcula materiales: blocks, cemento, arena y varillas. Responde solo en JSON.";
+      const prompt = "Analiza este plano de construcción. Devuelve un JSON con: materiales (blocks, cemento, arena_m3, varillas).";
 
       const resultIA = await model.generateContent([prompt, imagePart]);
-      const text = resultIA.response.text().replace(/```json|```/g, "").trim();
+      const response = await resultIA.response;
+      const text = response.text().replace(/```json|```/g, "").trim();
+      
       setResult(JSON.parse(text));
     } catch (error) {
-      console.error(error);
-      alert("La IA no pudo leer el plano. Intenta con otra foto.");
+      console.error("Error detallado:", error);
+      alert("Hubo un problema con la IA. Revisa la consola (F12).");
     } finally {
       setLoading(false);
     }
@@ -50,24 +54,29 @@ export default function App() {
   return (
     <div style={{ padding: '20px', backgroundColor: '#000', color: '#fff', minHeight: '100vh', textAlign: 'center', fontFamily: 'sans-serif' }}>
       <h1 style={{ color: '#ff4d4d' }}>CUBIC AI PRO 🏗️</h1>
-      <div style={{ border: '1px solid #333', padding: '20px', borderRadius: '15px', maxWidth: '500px', margin: 'auto' }}>
-        <input type="file" onChange={handleFileUpload} accept="image/*" />
+      <div style={{ border: '2px solid #333', padding: '20px', borderRadius: '15px', maxWidth: '500px', margin: 'auto' }}>
+        <input type="file" onChange={handleFileUpload} accept="image/*" style={{ marginBottom: '20px' }} />
         {image && (
           <div>
-            <img src={image} style={{ width: '100%', marginTop: '20px', borderRadius: '10px' }} />
-            <button onClick={analizarPlano} disabled={loading} style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>
-              {loading ? "CALCULANDO..." : "GENERAR CÁLCULO"}
+            <img src={image} style={{ width: '100%', borderRadius: '10px' }} alt="Plano" />
+            <button 
+              onClick={analizarPlano} 
+              disabled={loading} 
+              style={{ width: '100%', padding: '15px', marginTop: '20px', backgroundColor: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              {loading ? "CALCULANDO CON IA..." : "GENERAR CÁLCULO"}
             </button>
           </div>
         )}
       </div>
+
       {result && (
-        <div style={{ marginTop: '20px', textAlign: 'left', maxWidth: '500px', margin: '20px auto', padding: '20px', backgroundColor: '#111', borderRadius: '10px' }}>
-          <h3>Resultados:</h3>
-          <p>Blocks: {result.materiales?.blocks || result.materiales?.block}</p>
-          <p>Cemento: {result.materiales?.cemento} fundas</p>
-          <p>Arena: {result.materiales?.arena_m3} m3</p>
-          <p>Varillas: {result.materiales?.varillas}</p>
+        <div style={{ marginTop: '30px', textAlign: 'left', maxWidth: '500px', margin: '20px auto', padding: '20px', backgroundColor: '#111', borderRadius: '10px', border: '1px solid #ff4d4d' }}>
+          <h3 style={{ color: '#ff4d4d' }}>Cómputo Métrico Estimado:</h3>
+          <p><strong>Blocks:</strong> {result.materiales?.blocks || 'N/A'}</p>
+          <p><strong>Cemento:</strong> {result.materiales?.cemento || 'N/A'} fundas</p>
+          <p><strong>Arena:</strong> {result.materiales?.arena_m3 || 'N/A'} m3</p>
+          <p><strong>Varillas:</strong> {result.materiales?.varillas || 'N/A'}</p>
         </div>
       )}
     </div>
