@@ -1,74 +1,23 @@
-import React, { useState } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-interface CalculationResult {
-  areas: { nombre: string; m2: number }[];
-  materiales: {
-    blocks: number;
-    cemento: number;
-    arena_m3: number;
-    varillas: number;
-  };
-  nota: string;
+{
+  "name": "cubic-ai-pro",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
 }
-
-export default function App() {
-  const [image, setImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CalculationResult | null>(null);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const analizarPlano = async () => {
-    if (!image) return alert("Sube el plano primero.");
-    
-    // Verificamos si la llave existe
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return alert("Error: No se encontró la llave VITE_GEMINI_API_KEY en Vercel.");
-
-    setLoading(true);
-    setResult(null);
-
-    try {
-      // Configuramos Gemini directamente
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-      // Limpiamos la imagen para enviarla
-      const base64Data = image.split(",")[1];
-      const imagePart = {
-        inlineData: { data: base64Data, mimeType: "image/jpeg" },
-      };
-
-      const prompt = "Eres un experto calculador de materiales de construcción. Analiza este plano y responde UNICAMENTE con un objeto JSON (sin texto extra). Formato: {\"areas\": [{\"nombre\": \"\", \"m2\": 0}], \"materiales\": {\"blocks\": 0, \"cemento\": 0, \"arena_m3\": 0, \"varillas\": 0}, \"nota\": \"Resumen breve\"}";
-
-      const resultIA = await model.generateContent([prompt, imagePart]);
-      const response = await resultIA.response;
-      let text = response.text().replace(/```json|```/g, "").trim();
-      
-      const parsedResult = JSON.parse(text);
-      setResult(parsedResult);
-    } catch (error) {
-      console.error("Error completo:", error);
-      alert("La IA falló al leer el plano. Asegúrate de que sea una imagen clara.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: '20px', minHeight: '100vh', backgroundColor: '#000', color: '#fff', fontFamily: 'sans-serif', textAlign: 'center' }}>
-      <div style={{ marginBottom: '40px', marginTop: '20px' }}>
-        <h1 style={{ color: '#ff4d4d', fontSize: '2rem', margin: '0' }}>CUBIC AI PRO 🏗️</h1>
-        <p style={{ color: '#888', fontSize: '0.9rem' }}>Identifica dimensiones y calcula materiales automáticamente.</p>
-      </div>
-
-      <div style={{ maxWidth: '500px', margin: 'auto', padding: '30px', border: '1px solid #333', borderRadius: '20px', backgroundColor: '#0a0a0a' }}>
-        <input type="file" onChange={handleFileUpload} accept="image/*" style={{ marginBottom: '20px', color: '#888' }} />
