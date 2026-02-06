@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// USANDO TU LLAVE DIRECTAMENTE
 const API_KEY = "AIzaSyBZbDEMgVJP96NWqZnm84rH64TXJt1Evic";
 
 export default function App() {
@@ -24,28 +25,40 @@ export default function App() {
       const base64Data = image.split(",")[1];
       const imagePart = { inlineData: { data: base64Data, mimeType: "image/jpeg" } };
 
-      const prompt = "Analiza este plano. Devuelve SOLO un JSON con: blocks, cemento, arena_m3, varillas. Sin texto extra.";
+      const prompt = "Analiza este plano. Calcula la cantidad de: blocks, fundas de cemento, arena m3 y varillas. Devuelve SOLO un JSON asi: {'blocks':0, 'cemento':0, 'arena':0, 'varillas':0}";
+      
       const res = await model.generateContent([prompt, imagePart]);
       const text = res.response.text().replace(/```json|```/g, "").trim();
       setResult(JSON.parse(text));
     } catch (e) {
-      alert("Error de lectura. Intenta con una captura de pantalla más pequeña.");
+      console.error(e);
+      alert("Error de lectura. ¡Prueba con una captura de pantalla del plano!");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ color: '#f00' }}>CUBIC AI PRO 🏗️</h1>
-      <input type="file" onChange={handleFileUpload} />
-      {image && <button onClick={analizarPlano} disabled={loading}>{loading ? "Calculando..." : "Generar Cálculo"}</button>}
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1 style={{ color: '#ff4d4d' }}>CUBIC AI PRO 🏗️</h1>
+      <input type="file" onChange={handleFileUpload} style={{ margin: '20px 0' }} />
+      
+      {image && (
+        <div>
+          <img src={image} style={{ width: '300px', borderRadius: '10px' }} />
+          <br />
+          <button onClick={analizarPlano} disabled={loading} style={{ padding: '15px 30px', backgroundColor: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginTop: '20px' }}>
+            {loading ? "CALCULANDO..." : "GENERAR CÁLCULO"}
+          </button>
+        </div>
+      )}
+
       {result && (
-        <div style={{ border: '1px solid #f00', marginTop: '20px', padding: '10px' }}>
-          <p>Blocks: {result.blocks}</p>
-          <p>Cemento: {result.cemento}</p>
-          <p>Arena: {result.arena_m3}</p>
-          <p>Varillas: {result.varillas}</p>
+        <div style={{ marginTop: '30px', border: '2px solid #ff4d4d', padding: '20px', display: 'inline-block' }}>
+          <p>🧱 Blocks: {result.blocks}</p>
+          <p>🥡 Cemento: {result.cemento} fundas</p>
+          <p>⏳ Arena: {result.arena} m3</p>
+          <p>🧵 Varillas: {result.varillas}</p>
         </div>
       )}
     </div>
